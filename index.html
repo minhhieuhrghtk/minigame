@@ -2,105 +2,131 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Open The Box – Notebook</title>
+<title>Open The Box</title>
+
 <style>
-body {
-  margin: 0;
-  background: url("https://i.imgur.com/8IuucQZ.jpg");
-  background-size: cover;
-  font-family: 'Segoe UI', sans-serif;
-  text-align: center;
+body{
+  margin:0;
+  background:url("https://i.imgur.com/8IuucQZ.jpg");
+  background-size:cover;
+  font-family:Segoe UI, sans-serif;
+  text-align:center;
+}
+h1{
+  color:#fff;
+  margin:20px;
+  text-shadow:2px 2px 6px #000;
+}
+.controls button{
+  padding:10px 20px;
+  margin:5px;
+  border:none;
+  border-radius:20px;
+  font-size:16px;
+  cursor:pointer;
+}
+#board{
+  display:grid;
+  grid-template-columns:repeat(4,120px);
+  gap:20px;
+  justify-content:center;
+  margin:30px auto;
+}
+.note{
+  width:120px;
+  height:140px;
+  border-radius:6px;
+  position:relative;
+  cursor:pointer;
+  box-shadow:0 10px 20px rgba(0,0,0,.4);
+  transition:.5s;
+}
+.note::before{
+  content:"";
+  position:absolute;
+  top:-10px;
+  left:0;
+  right:0;
+  height:14px;
+  background:repeating-linear-gradient(
+    to right,#000,#000 2px,transparent 2px,transparent 10px);
+}
+.note span{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  font-weight:bold;
+}
+.blue{background:#4fc3f7}
+.pink{background:#f06292}
+.green{background:#66bb6a}
+
+.note.removed{
+  opacity:0;
+  transform:scale(0);
+  pointer-events:none;
+}
+.note.locked{filter:grayscale(1)}
+.shuffle{animation:wiggle .4s infinite alternate}
+@keyframes wiggle{
+  from{transform:translateX(-6px) rotate(-3deg)}
+  to{transform:translateX(6px) rotate(3deg)}
 }
 
-h1 {
-  color: #fff;
-  margin: 20px;
-  text-shadow: 2px 2px 4px #000;
+/* ===== POPUP ===== */
+#popup{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.75);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
 }
-
-.controls {
-  margin-bottom: 10px;
+.book{
+  width:320px;
+  height:220px;
+  perspective:1000px;
 }
-button {
-  padding: 10px 20px;
-  border-radius: 20px;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  margin: 5px;
+.book-inner{
+  width:100%;
+  height:100%;
+  position:relative;
+  transform-style:preserve-3d;
+  animation:openBook .8s ease forwards;
 }
-
-#board {
-  display: grid;
-  grid-template-columns: repeat(4, 120px);
-  gap: 20px;
-  justify-content: center;
-  margin: 30px auto;
+.page{
+  position:absolute;
+  inset:0;
+  background:#fffbe6;
+  border-radius:10px;
+  padding:20px;
+  backface-visibility:hidden;
 }
-
-.note {
-  position: relative;
-  width: 120px;
-  height: 140px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: transform 0.6s ease, opacity 0.6s ease;
-  box-shadow: 0 8px 15px rgba(0,0,0,0.4);
+.page.back{
+  transform:rotateY(180deg);
 }
-
-.note::before {
-  content: "";
-  position: absolute;
-  top: -10px;
-  left: 0;
-  right: 0;
-  height: 15px;
-  background: repeating-linear-gradient(
-    to right,
-    #000,
-    #000 2px,
-    transparent 2px,
-    transparent 10px
-  );
+@keyframes openBook{
+  from{transform:rotateY(0)}
+  to{transform:rotateY(180deg)}
 }
-
-.note span {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%,-50%);
-  font-size: 28px;
-  font-weight: bold;
-}
-
-.blue { background: #4fc3f7; }
-.pink { background: #f06292; }
-.green { background: #66bb6a; }
-
-.note.removed {
-  opacity: 0;
-  pointer-events: none;
-  transform: scale(0);
-}
-
-.note.locked {
-  filter: grayscale(1);
-}
-
-.shuffle {
-  animation: wiggle 0.4s infinite alternate;
-}
-
-@keyframes wiggle {
-  from { transform: translateX(-8px) rotate(-3deg); }
-  to   { transform: translateX(8px) rotate(3deg); }
+.popup-actions button{
+  margin:10px;
+  padding:8px 16px;
+  border:none;
+  border-radius:16px;
+  cursor:pointer;
+  font-size:14px;
 }
 </style>
 </head>
+
 <body>
 
 <h1>Tap one to open</h1>
-
 <div class="controls">
   <button onclick="shuffleBoxes()">🔀 Xáo trộn</button>
   <button onclick="resetGame()">♻ Reset</button>
@@ -108,89 +134,128 @@ button {
 
 <div id="board"></div>
 
+<!-- POPUP -->
+<div id="popup">
+  <div class="book">
+    <div class="book-inner">
+      <div class="page" id="page-front"></div>
+      <div class="page back" id="page-back"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SOUND -->
+<audio id="winSound">
+  <source src="https://assets.mixkit.co/sfx/preview/mixkit-winning-notification-2018.mp3">
+</audio>
+
 <script>
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vReo557WJ8YlXpCjOrv1RwmBOWksCqGwUZF1i9mS7y1DLHCjjaJ6Fsp9viEoSUvW7bOsj_0FDCM9CHA/pub?gid=1640986760&single=true&output=csv";
 
-let original = [];
-let boxes = [];
-let lockedIndex = null;
+let original=[], boxes=[], lockedIndex=null, currentIndex=null;
 
 fetch(SHEET_CSV_URL)
-  .then(r=>r.text())
-  .then(csv=>{
-    const rows = csv.split("\n").slice(1,17);
-    original = rows.map((r,i)=>{
-      const [reward, question] = r.split(",");
-      return { id:i+1, reward, question };
-    });
-    resetGame();
-  });
+.then(r=>r.text())
+.then(csv=>{
+  const rows = csv
+    .split("\n")
+    .slice(1)
+    .filter(r=>r.trim()!=="")
+    .slice(0,16);
 
-function resetGame() {
-  boxes = original.map(b=>({ ...b, removed:false }));
-  lockedIndex = null;
+  if(rows.length<16){
+    alert("Google Sheet chưa đủ 16 câu hỏi");
+    return;
+  }
+
+  original = rows.map((r,i)=>{
+    const [reward,question]=r.split(",");
+    return {id:i+1,reward,question};
+  });
+  resetGame();
+});
+
+function resetGame(){
+  boxes = original.map(b=>({...b,removed:false}));
+  lockedIndex=null;
   render();
 }
 
-function render() {
-  const board = document.getElementById("board");
-  board.innerHTML = "";
-  const colors = ["blue","pink","green"];
-
+function render(){
+  const board=document.getElementById("board");
+  board.innerHTML="";
+  const colors=["blue","pink","green"];
   boxes.forEach((b,i)=>{
-    const div = document.createElement("div");
-    div.className = `note ${colors[i%3]}`;
-    if (b.removed) div.classList.add("removed");
-    if (lockedIndex===i) div.classList.add("locked");
-    div.innerHTML = `<span>${b.id}</span>`;
-    div.onclick = ()=>openBox(i);
-    board.appendChild(div);
+    const d=document.createElement("div");
+    d.className=`note ${colors[i%3]}`;
+    if(b.removed)d.classList.add("removed");
+    if(lockedIndex===i)d.classList.add("locked");
+    d.innerHTML=`<span>${b.id}</span>`;
+    d.onclick=()=>openBox(i);
+    board.appendChild(d);
   });
 }
 
-function openBox(i) {
-  if (lockedIndex===i || boxes[i].removed) return;
-  const b = boxes[i];
-
-  const correct = confirm(
-    `❓ ${b.question}\n\nOK = Trả lời đúng\nCancel = Trả lời sai`
+function openBox(i){
+  if(boxes[i].removed||lockedIndex===i)return;
+  currentIndex=i;
+  openPopup(
+    "❓ Câu hỏi",
+    boxes[i].question,
+    true
   );
+}
 
-  if (correct) {
-    alert(`🎉 Phần thưởng: ${b.reward}`);
-    b.removed = true;
-    lockedIndex = null;
-  } else {
-    lockedIndex = i;
+function openPopup(title,content,isQuestion){
+  document.getElementById("popup").style.display="flex";
+  document.getElementById("page-front").innerHTML=`<h3>${title}</h3>`;
+  document.getElementById("page-back").innerHTML=`
+    <p>${content}</p>
+    <div class="popup-actions">
+      ${isQuestion?`
+        <button onclick="answer(true)">✅ Đúng</button>
+        <button onclick="answer(false)">❌ Sai</button>
+      `:`<button onclick="closePopup()">OK</button>`}
+    </div>`;
+}
+
+function closePopup(){
+  document.getElementById("popup").style.display="none";
+}
+
+function answer(correct){
+  const b=boxes[currentIndex];
+  closePopup();
+  if(correct){
+    document.getElementById("winSound").play();
+    b.removed=true;
+    lockedIndex=null;
+    setTimeout(()=>{
+      openPopup("🎁 Phần thưởng",`<strong>${b.reward}</strong>`,false);
+      render();
+    },300);
+  }else{
+    lockedIndex=currentIndex;
     shuffleBoxes();
   }
-  render();
 }
 
-function shuffleBoxes() {
-  const notes = document.querySelectorAll(".note");
+function shuffleBoxes(){
+  const notes=document.querySelectorAll(".note");
   notes.forEach(n=>n.classList.add("shuffle"));
-
-  let count = 0;
-  const interval = setInterval(()=>{
-    const movableIndexes = boxes
-      .map((b,i)=>({b,i}))
-      .filter(o=>!o.b.removed && o.i!==lockedIndex)
-      .map(o=>o.i);
-
-    for (let i=movableIndexes.length-1;i>0;i--) {
-      const j = Math.floor(Math.random()*(i+1));
-      [boxes[movableIndexes[i]], boxes[movableIndexes[j]]] =
-      [boxes[movableIndexes[j]], boxes[movableIndexes[i]]];
+  let count=0;
+  const iv=setInterval(()=>{
+    const idxs=boxes.map((b,i)=>i).filter(i=>!boxes[i].removed&&i!==lockedIndex);
+    for(let i=idxs.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [boxes[idxs[i]],boxes[idxs[j]]]=[boxes[idxs[j]],boxes[idxs[i]]];
     }
-
     render();
-    count++;
-    if (count>=10) {
-      clearInterval(interval);
+    if(++count>=10){
+      clearInterval(iv);
       document.querySelectorAll(".note").forEach(n=>n.classList.remove("shuffle"));
     }
-  },500); // 5s
+  },500);
 }
 </script>
 
