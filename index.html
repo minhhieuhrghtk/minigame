@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Open The Box – Zoom Question</title>
+<title>Open The Box – Zoom From Box</title>
 
 <style>
 *{box-sizing:border-box}
@@ -11,8 +11,7 @@ body{
   height:100vh;
   overflow:hidden;
   font-family:"Segoe UI",system-ui,sans-serif;
-  background:
-    radial-gradient(circle at top,#0f5132,#052e1b 70%);
+  background:radial-gradient(circle at top,#0f5132,#052e1b 70%);
   color:#fff;
 }
 
@@ -42,12 +41,12 @@ header h1{
   font-size:42px;
   font-weight:800;
   color:#ffd966;
-  text-shadow:0 0 20px rgba(255,215,100,.7);
+  text-shadow:0 0 20px rgba(255,215,100,.8);
 }
 
 /* ===== CONTROLS ===== */
 .controls{
-  position:absolute;top:20px;right:30px;
+  position:absolute;top:20px;right:30px;z-index:10;
 }
 .controls button{
   padding:10px 24px;
@@ -55,7 +54,8 @@ header h1{
   border:none;border-radius:30px;
   cursor:pointer;
   background:linear-gradient(135deg,#ffd966,#ffb703);
-  font-weight:600;
+  font-weight:700;
+  color:#143;
 }
 
 /* ===== GRID ===== */
@@ -65,60 +65,65 @@ header h1{
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:30px;
+  transition:filter .4s ease;
 }
+#board.dimmed{filter:blur(4px) brightness(.6)}
 
 /* ===== BOX ===== */
 .box{
   height:140px;
   border-radius:18px;
-  background:linear-gradient(135deg,#d1fae5,#6ee7b7);
+  background:linear-gradient(135deg,#ecfeff,#a7f3d0);
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:42px;
-  font-weight:800;
-  color:#14532d;
+  font-size:44px;
+  font-weight:900;
+  color:#064e3b;
   cursor:pointer;
   box-shadow:0 15px 30px rgba(0,0,0,.45);
-  transition:transform .8s ease,opacity .4s ease;
+  transition:transform .6s ease,opacity .4s ease;
+  position:relative;
+  z-index:1;
 }
 .box.removed{opacity:0;transform:scale(0)}
 .box.locked{filter:grayscale(1)}
 
-/* ===== ZOOM CARD ===== */
-#zoomOverlay{
+/* ===== ZOOM STATE ===== */
+.box.zoomed{
   position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.7);
-  display:none;
-  align-items:center;
-  justify-content:center;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%) scale(2.2);
+  width:260px;
+  height:200px;
   z-index:50;
+  cursor:default;
 }
-.zoom-card{
-  width:520px;
-  min-height:300px;
-  background:#fffbe6;
-  border-radius:24px;
-  padding:30px;
-  color:#143;
+
+/* ===== QUESTION CONTENT ===== */
+.question{
+  padding:20px;
   text-align:center;
-  animation:zoomIn .4s ease;
 }
-@keyframes zoomIn{
-  from{transform:scale(.6);opacity:0}
-  to{transform:scale(1);opacity:1}
+.question h2{
+  font-size:26px;
+  margin-bottom:14px;
+  color:#064e3b;
 }
-.zoom-card h2{font-size:30px}
-.zoom-card p{font-size:22px;margin:20px 0}
-.zoom-card button{
+.question p{
+  font-size:20px;
+  font-weight:600;
+  color:#14532d;
+}
+.question button{
   margin:10px;
-  padding:12px 26px;
+  padding:10px 24px;
   border:none;
   border-radius:22px;
   cursor:pointer;
   background:#ffd966;
-  font-weight:600;
+  font-weight:700;
+  color:#143;
 }
 
 /* ===== REWARD POPUP ===== */
@@ -138,16 +143,24 @@ header h1{
   padding:34px;
   text-align:center;
   animation:zoomIn .4s ease;
+  color:#143;
 }
-.reward-box h2{font-size:32px;color:#b45309}
-.reward-box strong{font-size:34px}
+@keyframes zoomIn{
+  from{transform:scale(.7);opacity:0}
+  to{transform:scale(1);opacity:1}
+}
+.reward-box h2{
+  font-size:34px;
+  color:#b45309;
+}
+.reward-box strong{font-size:36px}
 .reward-box button{
   margin-top:20px;
   padding:12px 30px;
   border:none;
   border-radius:24px;
   background:#ffd966;
-  font-weight:600;
+  font-weight:700;
 }
 
 footer{
@@ -175,11 +188,6 @@ footer{
 <div id="board"></div>
 <footer>Chọn một ô bất kỳ</footer>
 
-<!-- ZOOM QUESTION -->
-<div id="zoomOverlay">
-  <div class="zoom-card" id="zoomCard"></div>
-</div>
-
 <!-- REWARD -->
 <div id="rewardPopup">
   <div class="reward-box" id="rewardBox"></div>
@@ -192,13 +200,11 @@ footer{
 <script>
 const SHEET_CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vReo557WJ8YlXpCjOrv1RwmBOWksCqGwUZF1i9mS7y1DLHCjjaJ6Fsp9viEoSUvW7bOsj_0FDCM9CHA/pub?gid=1640986760&single=true&output=csv";
 const board=document.getElementById("board");
-const zoomOverlay=document.getElementById("zoomOverlay");
-const zoomCard=document.getElementById("zoomCard");
 const rewardPopup=document.getElementById("rewardPopup");
 const rewardBox=document.getElementById("rewardBox");
 const winSound=document.getElementById("winSound");
 
-let questions=[],lockedIndex=null,currentIndex=null;
+let questions=[],lockedIndex=null,activeBox=null,activeIndex=null;
 
 fetch(SHEET_CSV_URL)
 .then(r=>r.text())
@@ -214,7 +220,7 @@ fetch(SHEET_CSV_URL)
 function resetGame(){
   questions.forEach(q=>q.removed=false);
   lockedIndex=null;
-  shuffleBoxes(false);
+  render();
 }
 
 function render(){
@@ -225,74 +231,66 @@ function render(){
     if(q.removed)d.classList.add("removed");
     if(lockedIndex===i)d.classList.add("locked");
     d.innerText=i+1;
-    d.onclick=()=>openZoom(i);
+    d.onclick=()=>openBox(d,i);
     board.appendChild(d);
   });
 }
 
-function openZoom(i){
-  if(questions[i].removed||lockedIndex===i)return;
-  currentIndex=i;
-  zoomOverlay.style.display="flex";
-  zoomCard.innerHTML=`
-    <h2>❓ CÂU HỎI</h2>
-    <p>${questions[i].question}</p>
-    <button onclick="answer(true)">✅ Đúng</button>
-    <button onclick="answer(false)">❌ Sai</button>
-  `;
+function openBox(box,i){
+  if(questions[i].removed||lockedIndex===i||activeBox)return;
+  activeBox=box;
+  activeIndex=i;
+  board.classList.add("dimmed");
+  box.classList.add("zoomed");
+  box.innerHTML=`
+    <div class="question">
+      <h2>❓ CÂU HỎI</h2>
+      <p>${questions[i].question}</p>
+      <button onclick="answer(true)">✅ Đúng</button>
+      <button onclick="answer(false)">❌ Sai</button>
+    </div>`;
 }
 
 function answer(correct){
-  zoomOverlay.style.display="none";
+  board.classList.remove("dimmed");
+  activeBox.classList.remove("zoomed");
+  activeBox.innerText=activeIndex+1;
+
   if(correct){
     winSound.play();
-    questions[currentIndex].removed=true;
+    questions[activeIndex].removed=true;
     lockedIndex=null;
     setTimeout(()=>{
       rewardPopup.style.display="flex";
       rewardBox.innerHTML=`
         <h2>🎁 PHẦN THƯỞNG</h2>
-        <p><strong>${questions[currentIndex].reward}</strong></p>
+        <p><strong>${questions[activeIndex].reward}</strong></p>
         <button onclick="rewardPopup.style.display='none'">OK</button>
       `;
       render();
     },300);
   }else{
-    lockedIndex=currentIndex;
-    shuffleBoxes(true);
+    lockedIndex=activeIndex;
+    shuffleBoxes();
   }
+  activeBox=null;
 }
 
-/* ===== SHUFFLE ===== */
-function shuffleBoxes(animated=true){
-  const boxes=[...document.querySelectorAll(".box")];
-  const rect=board.getBoundingClientRect();
-  const cx=rect.width/2-70;
-  const cy=rect.height/2-70;
+function shuffleBoxes(){
+  const movable=questions
+    .map((q,i)=>({q,i}))
+    .filter(o=>!o.q.removed&&o.i!==lockedIndex)
+    .map(o=>o.q);
 
-  if(animated){
-    boxes.forEach(b=>{
-      b.style.transform=
-        `translate(${cx-b.offsetLeft}px,${cy-b.offsetTop}px) scale(.6)`;
-    });
-  }
+  movable.sort(()=>Math.random()-0.5);
 
-  setTimeout(()=>{
-    const movable=questions
-      .map((q,i)=>({q,i}))
-      .filter(o=>!o.q.removed&&o.i!==lockedIndex)
-      .map(o=>o.q);
+  let idx=0;
+  questions=questions.map((q,i)=>{
+    if(q.removed||i===lockedIndex)return q;
+    return movable[idx++];
+  });
 
-    movable.sort(()=>Math.random()-0.5);
-
-    let idx=0;
-    questions=questions.map((q,i)=>{
-      if(q.removed||i===lockedIndex)return q;
-      return movable[idx++];
-    });
-
-    render();
-  },animated?600:0);
+  render();
 }
 </script>
 
