@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Open The Box – Pro</title>
+<title>Open The Box – Final</title>
 
 <style>
 body{
@@ -26,11 +26,13 @@ h1{
   cursor:pointer;
 }
 #board{
+  position:relative;
+  width:700px;
+  margin:40px auto;
   display:grid;
   grid-template-columns:repeat(4,140px);
   gap:30px;
   justify-content:center;
-  margin:40px auto;
 }
 
 /* NOTE */
@@ -84,7 +86,7 @@ h1{
   z-index:999;
 }
 .book{
-  width:340px;
+  width:360px;
   height:240px;
   perspective:1200px;
 }
@@ -108,8 +110,11 @@ h1{
   from{transform:rotateY(0)}
   to{transform:rotateY(180deg)}
 }
+.popup-actions{
+  margin-top:20px;
+}
 .popup-actions button{
-  margin:10px;
+  margin:8px;
   padding:8px 18px;
   border:none;
   border-radius:18px;
@@ -123,7 +128,7 @@ h1{
 
 <h1>Tap one to open</h1>
 <div class="controls">
-  <button onclick="shuffleBoxes(true)">🔀 Xáo trộn</button>
+  <button onclick="shuffleBoxes()">🔀 Xáo trộn</button>
   <button onclick="resetGame()">♻ Reset</button>
 </div>
 
@@ -132,14 +137,13 @@ h1{
 <!-- POPUP -->
 <div id="popup">
   <div class="book">
-    <div class="book-inner">
-      <div class="page" id="page-front"></div>
-      <div class="page back" id="page-back"></div>
+    <div class="book-inner" id="bookInner">
+      <div class="page" id="pageFront"></div>
+      <div class="page back" id="pageBack"></div>
     </div>
   </div>
 </div>
 
-<!-- SOUND -->
 <audio id="winSound">
   <source src="https://assets.mixkit.co/sfx/preview/mixkit-winning-notification-2018.mp3">
 </audio>
@@ -147,9 +151,13 @@ h1{
 <script>
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vReo557WJ8YlXpCjOrv1RwmBOWksCqGwUZF1i9mS7y1DLHCjjaJ6Fsp9viEoSUvW7bOsj_0FDCM9CHA/pub?gid=1640986760&single=true&output=csv";
 
-let questions=[];
-let lockedIndex=null;
-let currentIndex=null;
+const popup = document.getElementById("popup");
+const pageFront = document.getElementById("pageFront");
+const pageBack = document.getElementById("pageBack");
+const bookInner = document.getElementById("bookInner");
+const winSound = document.getElementById("winSound");
+
+let questions=[], lockedIndex=null, currentIndex=null;
 
 fetch(SHEET_CSV_URL)
 .then(r=>r.text())
@@ -165,14 +173,13 @@ fetch(SHEET_CSV_URL)
 function resetGame(){
   questions.forEach(q=>q.removed=false);
   lockedIndex=null;
-  shuffleBoxes(false,true);
+  shuffleBoxes(true);
 }
 
 function render(){
   const board=document.getElementById("board");
   board.innerHTML="";
   const colors=["blue","pink","green"];
-
   questions.forEach((q,i)=>{
     const d=document.createElement("div");
     d.className=`note ${colors[i%3]}`;
@@ -192,6 +199,10 @@ function openBox(i){
 
 function openPopup(title,content,isQuestion){
   popup.style.display="flex";
+  bookInner.style.animation="none";
+  bookInner.offsetHeight;
+  bookInner.style.animation="openBook .8s ease forwards";
+
   pageFront.innerHTML=`<h3>${title}</h3>`;
   pageBack.innerHTML=`
     <p>${content}</p>
@@ -203,7 +214,9 @@ function openPopup(title,content,isQuestion){
     </div>`;
 }
 
-function closePopup(){popup.style.display="none"}
+function closePopup(){
+  popup.style.display="none";
+}
 
 function answer(correct){
   const q=questions[currentIndex];
@@ -218,18 +231,21 @@ function answer(correct){
     },300);
   }else{
     lockedIndex=currentIndex;
-    shuffleBoxes(true);
+    shuffleBoxes();
   }
 }
 
-/* ===== SHUFFLE HIỆU ỨNG BAY + ĐỔI CHỖ ===== */
-function shuffleBoxes(animated=true,isReset=false){
+/* ===== SHUFFLE: TỤ → TRỘN → TẢN ===== */
+function shuffleBoxes(animated=true){
   const notes=[...document.querySelectorAll(".note")];
+  const board=document.getElementById("board");
+  const rect=board.getBoundingClientRect();
+  const cx=rect.width/2-70;
+  const cy=rect.height/2-80;
+
   if(animated){
     notes.forEach(n=>{
-      const x=(Math.random()-0.5)*200;
-      const y=(Math.random()-0.5)*200;
-      n.style.transform=`translate(${x}px,${y}px) rotate(${Math.random()*20-10}deg)`;
+      n.style.transform=`translate(${cx-n.offsetLeft}px,${cy-n.offsetTop}px) scale(.6) rotate(10deg)`;
     });
   }
 
@@ -248,7 +264,7 @@ function shuffleBoxes(animated=true,isReset=false){
     });
 
     render();
-  }, animated?700:0);
+  }, animated?600:0);
 }
 </script>
 
