@@ -2,58 +2,90 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Open The Box – Final</title>
+<title>Open The Box – 16:9 Show</title>
 
 <style>
+/* ===== RESET ===== */
+*{box-sizing:border-box}
 body{
   margin:0;
-  background:url("https://i.imgur.com/8IuucQZ.jpg");
-  background-size:cover;
-  font-family:Segoe UI,sans-serif;
-  text-align:center;
-}
-h1{
-  color:#fff;
-  margin:20px;
-  text-shadow:2px 2px 6px #000;
-}
-.controls button{
-  padding:10px 24px;
-  margin:5px;
-  border:none;
-  border-radius:24px;
-  font-size:16px;
-  cursor:pointer;
-}
-#board{
-  position:relative;
-  width:700px;
-  margin:40px auto;
-  display:grid;
-  grid-template-columns:repeat(4,140px);
-  gap:30px;
+  background:#0b1020;
+  font-family:"Segoe UI",system-ui,sans-serif;
+  display:flex;
   justify-content:center;
+  align-items:center;
+  height:100vh;
 }
 
-/* NOTE */
+/* ===== STAGE 16:9 ===== */
+#stage{
+  width:1280px;
+  height:720px;
+  background:
+    radial-gradient(circle at top,#2a3cff,#0b1020 60%);
+  box-shadow:0 0 80px rgba(0,0,0,.8);
+  position:relative;
+  overflow:hidden;
+}
+
+/* ===== HEADER ===== */
+header{
+  text-align:center;
+  color:#fff;
+  padding:20px;
+}
+header h1{
+  margin:0;
+  font-size:40px;
+  letter-spacing:2px;
+  text-shadow:0 4px 10px rgba(0,0,0,.6);
+}
+
+/* ===== CONTROLS ===== */
+.controls{
+  position:absolute;
+  top:20px;
+  right:30px;
+}
+.controls button{
+  padding:10px 22px;
+  margin-left:10px;
+  border:none;
+  border-radius:22px;
+  font-size:15px;
+  cursor:pointer;
+  background:linear-gradient(135deg,#ff9800,#ff5722);
+  color:#fff;
+  box-shadow:0 6px 15px rgba(0,0,0,.4);
+}
+
+/* ===== BOARD ===== */
+#board{
+  width:900px;
+  margin:40px auto 0;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:36px;
+}
+
+/* ===== NOTE CARD ===== */
 .note{
-  width:140px;
-  height:160px;
-  border-radius:8px;
+  height:150px;
+  border-radius:12px;
   position:relative;
   cursor:pointer;
-  box-shadow:0 12px 25px rgba(0,0,0,.45);
-  transition:transform .8s ease, opacity .6s ease;
+  box-shadow:0 15px 30px rgba(0,0,0,.45);
+  transition:transform .8s ease,opacity .5s ease;
 }
 .note::before{
   content:"";
   position:absolute;
-  top:-12px;
+  top:-14px;
   left:0;
   right:0;
-  height:16px;
+  height:18px;
   background:repeating-linear-gradient(
-    to right,#000,#000 2px,transparent 2px,transparent 12px);
+    to right,#111,#111 2px,transparent 2px,transparent 14px);
 }
 .note span{
   position:absolute;
@@ -61,12 +93,14 @@ h1{
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:30px;
-  font-weight:bold;
+  font-size:42px;
+  font-weight:700;
+  color:#222;
 }
-.blue{background:#4fc3f7}
-.pink{background:#f06292}
-.green{background:#66bb6a}
+
+.blue{background:#7dd3fc}
+.pink{background:#f9a8d4}
+.green{background:#86efac}
 
 .note.removed{
   opacity:0;
@@ -75,19 +109,19 @@ h1{
 }
 .note.locked{filter:grayscale(1)}
 
-/* ===== POPUP BOOK ===== */
+/* ===== POPUP ===== */
 #popup{
-  position:fixed;
+  position:absolute;
   inset:0;
-  background:rgba(0,0,0,.75);
+  background:rgba(0,0,0,.7);
   display:none;
   align-items:center;
   justify-content:center;
-  z-index:999;
+  z-index:99;
 }
 .book{
-  width:360px;
-  height:240px;
+  width:420px;
+  height:280px;
   perspective:1200px;
 }
 .book-inner{
@@ -95,14 +129,14 @@ h1{
   height:100%;
   position:relative;
   transform-style:preserve-3d;
-  animation:openBook .8s ease forwards;
+  animation:openBook .9s ease forwards;
 }
 .page{
   position:absolute;
   inset:0;
   background:#fffbe6;
-  border-radius:12px;
-  padding:20px;
+  border-radius:14px;
+  padding:24px;
   backface-visibility:hidden;
 }
 .page.back{transform:rotateY(180deg)}
@@ -112,13 +146,24 @@ h1{
 }
 .popup-actions{
   margin-top:20px;
+  text-align:center;
 }
 .popup-actions button{
-  margin:8px;
-  padding:8px 18px;
+  margin:10px;
+  padding:10px 22px;
   border:none;
-  border-radius:18px;
+  border-radius:20px;
   cursor:pointer;
+  font-size:15px;
+}
+
+/* ===== FOOTER ===== */
+footer{
+  position:absolute;
+  bottom:20px;
+  width:100%;
+  text-align:center;
+  color:#aaa;
   font-size:14px;
 }
 </style>
@@ -126,13 +171,20 @@ h1{
 
 <body>
 
-<h1>Tap one to open</h1>
+<div id="stage">
+
+<header>
+  <h1>OPEN THE BOX</h1>
+</header>
+
 <div class="controls">
-  <button onclick="shuffleBoxes()">🔀 Xáo trộn</button>
+  <button onclick="shuffleBoxes()">🔀 Shuffle</button>
   <button onclick="resetGame()">♻ Reset</button>
 </div>
 
 <div id="board"></div>
+
+<footer>Tap one to open</footer>
 
 <!-- POPUP -->
 <div id="popup">
@@ -148,24 +200,26 @@ h1{
   <source src="https://assets.mixkit.co/sfx/preview/mixkit-winning-notification-2018.mp3">
 </audio>
 
+</div>
+
 <script>
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vReo557WJ8YlXpCjOrv1RwmBOWksCqGwUZF1i9mS7y1DLHCjjaJ6Fsp9viEoSUvW7bOsj_0FDCM9CHA/pub?gid=1640986760&single=true&output=csv";
+const SHEET_CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vReo557WJ8YlXpCjOrv1RwmBOWksCqGwUZF1i9mS7y1DLHCjjaJ6Fsp9viEoSUvW7bOsj_0FDCM9CHA/pub?gid=1640986760&single=true&output=csv";
 
-const popup = document.getElementById("popup");
-const pageFront = document.getElementById("pageFront");
-const pageBack = document.getElementById("pageBack");
-const bookInner = document.getElementById("bookInner");
-const winSound = document.getElementById("winSound");
+const popup=document.getElementById("popup");
+const pageFront=document.getElementById("pageFront");
+const pageBack=document.getElementById("pageBack");
+const bookInner=document.getElementById("bookInner");
+const winSound=document.getElementById("winSound");
 
-let questions=[], lockedIndex=null, currentIndex=null;
+let questions=[],lockedIndex=null,currentIndex=null;
 
 fetch(SHEET_CSV_URL)
 .then(r=>r.text())
 .then(csv=>{
-  const rows = csv.split("\n").slice(1).filter(r=>r.trim()!=="").slice(0,16);
-  questions = rows.map(r=>{
+  const rows=csv.split("\n").slice(1).filter(r=>r.trim()!=="").slice(0,16);
+  questions=rows.map(r=>{
     const [reward,question]=r.split(",");
-    return {reward,question,removed:false};
+    return{reward,question,removed:false};
   });
   resetGame();
 });
@@ -177,7 +231,6 @@ function resetGame(){
 }
 
 function render(){
-  const board=document.getElementById("board");
   board.innerHTML="";
   const colors=["blue","pink","green"];
   questions.forEach((q,i)=>{
@@ -201,22 +254,19 @@ function openPopup(title,content,isQuestion){
   popup.style.display="flex";
   bookInner.style.animation="none";
   bookInner.offsetHeight;
-  bookInner.style.animation="openBook .8s ease forwards";
-
+  bookInner.style.animation="openBook .9s ease forwards";
   pageFront.innerHTML=`<h3>${title}</h3>`;
   pageBack.innerHTML=`
     <p>${content}</p>
     <div class="popup-actions">
       ${isQuestion?`
-        <button onclick="answer(true)">✅ Đúng</button>
-        <button onclick="answer(false)">❌ Sai</button>
+      <button onclick="answer(true)">✅ Đúng</button>
+      <button onclick="answer(false)">❌ Sai</button>
       `:`<button onclick="closePopup()">OK</button>`}
     </div>`;
 }
 
-function closePopup(){
-  popup.style.display="none";
-}
+function closePopup(){popup.style.display="none"}
 
 function answer(correct){
   const q=questions[currentIndex];
@@ -235,36 +285,36 @@ function answer(correct){
   }
 }
 
-/* ===== SHUFFLE: TỤ → TRỘN → TẢN ===== */
+/* ===== SHUFFLE: TỤ → TRỘN → BUNG ===== */
 function shuffleBoxes(animated=true){
   const notes=[...document.querySelectorAll(".note")];
-  const board=document.getElementById("board");
   const rect=board.getBoundingClientRect();
   const cx=rect.width/2-70;
-  const cy=rect.height/2-80;
+  const cy=rect.height/2-75;
 
   if(animated){
     notes.forEach(n=>{
-      n.style.transform=`translate(${cx-n.offsetLeft}px,${cy-n.offsetTop}px) scale(.6) rotate(10deg)`;
+      n.style.transform=
+        `translate(${cx-n.offsetLeft}px,${cy-n.offsetTop}px) scale(.6) rotate(10deg)`;
     });
   }
 
   setTimeout(()=>{
     const movable=questions
       .map((q,i)=>({q,i}))
-      .filter(o=>!o.q.removed && o.i!==lockedIndex)
+      .filter(o=>!o.q.removed&&o.i!==lockedIndex)
       .map(o=>o.q);
 
     movable.sort(()=>Math.random()-0.5);
 
     let idx=0;
-    questions = questions.map((q,i)=>{
+    questions=questions.map((q,i)=>{
       if(q.removed||i===lockedIndex)return q;
       return movable[idx++];
     });
 
     render();
-  }, animated?600:0);
+  },animated?600:0);
 }
 </script>
 
