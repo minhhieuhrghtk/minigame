@@ -2,102 +2,124 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Open The Box – Wheel</title>
+<title>Open The Box – Notebook</title>
 <style>
 body {
-  background: radial-gradient(circle at center, #222, #000);
+  margin: 0;
+  background: url("https://i.imgur.com/8IuucQZ.jpg");
+  background-size: cover;
   font-family: 'Segoe UI', sans-serif;
-  color: #fff;
   text-align: center;
 }
 
 h1 {
-  margin-top: 20px;
-  letter-spacing: 2px;
+  color: #fff;
+  margin: 20px;
+  text-shadow: 2px 2px 4px #000;
 }
 
 .controls {
-  margin: 15px;
+  margin-bottom: 10px;
 }
-
 button {
   padding: 10px 20px;
-  font-size: 16px;
   border-radius: 20px;
   border: none;
+  font-size: 16px;
   cursor: pointer;
   margin: 5px;
-  background: linear-gradient(135deg, #ff9800, #ff5722);
-  color: #fff;
 }
 
-#wheel {
-  position: relative;
-  width: 500px;
-  height: 500px;
-  margin: 30px auto;
-  border-radius: 50%;
-}
-
-.box {
-  position: absolute;
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(145deg, #ffc107, #ff9800);
-  border-radius: 15px;
-  display: flex;
-  align-items: center;
+#board {
+  display: grid;
+  grid-template-columns: repeat(4, 120px);
+  gap: 20px;
   justify-content: center;
-  font-size: 22px;
-  font-weight: bold;
+  margin: 30px auto;
+}
+
+.note {
+  position: relative;
+  width: 120px;
+  height: 140px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.8s ease;
+  transition: transform 0.6s ease, opacity 0.6s ease;
+  box-shadow: 0 8px 15px rgba(0,0,0,0.4);
 }
 
-.box.locked {
-  background: #555;
-  cursor: not-allowed;
+.note::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 15px;
+  background: repeating-linear-gradient(
+    to right,
+    #000,
+    #000 2px,
+    transparent 2px,
+    transparent 10px
+  );
 }
 
-.box.removed {
+.note span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.blue { background: #4fc3f7; }
+.pink { background: #f06292; }
+.green { background: #66bb6a; }
+
+.note.removed {
   opacity: 0;
   pointer-events: none;
   transform: scale(0);
 }
 
-.shuffle {
-  animation: move 0.5s infinite alternate;
+.note.locked {
+  filter: grayscale(1);
 }
 
-@keyframes move {
-  from { transform: translateX(-10px) rotate(-5deg); }
-  to { transform: translateX(10px) rotate(5deg); }
+.shuffle {
+  animation: wiggle 0.4s infinite alternate;
+}
+
+@keyframes wiggle {
+  from { transform: translateX(-8px) rotate(-3deg); }
+  to   { transform: translateX(8px) rotate(3deg); }
 }
 </style>
 </head>
 <body>
 
-<h1>🎡 OPEN THE BOX 🎡</h1>
+<h1>Tap one to open</h1>
 
 <div class="controls">
   <button onclick="shuffleBoxes()">🔀 Xáo trộn</button>
   <button onclick="resetGame()">♻ Reset</button>
 </div>
 
-<div id="wheel"></div>
+<div id="board"></div>
 
 <script>
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vReo557WJ8YlXpCjOrv1RwmBOWksCqGwUZF1i9mS7y1DLHCjjaJ6Fsp9viEoSUvW7bOsj_0FDCM9CHA/pub?gid=1640986760&single=true&output=csv";
 
-let originalData = [];
+let original = [];
 let boxes = [];
 let lockedIndex = null;
 
 fetch(SHEET_CSV_URL)
-  .then(res => res.text())
-  .then(csv => {
+  .then(r=>r.text())
+  .then(csv=>{
     const rows = csv.split("\n").slice(1,17);
-    originalData = rows.map((r,i) => {
+    original = rows.map((r,i)=>{
       const [reward, question] = r.split(",");
       return { id:i+1, reward, question };
     });
@@ -105,48 +127,31 @@ fetch(SHEET_CSV_URL)
   });
 
 function resetGame() {
-  boxes = originalData.map(b => ({
-    ...b,
-    removed:false
-  }));
+  boxes = original.map(b=>({ ...b, removed:false }));
   lockedIndex = null;
-  shuffleInstant();
   render();
 }
 
 function render() {
-  const wheel = document.getElementById("wheel");
-  wheel.innerHTML = "";
+  const board = document.getElementById("board");
+  board.innerHTML = "";
+  const colors = ["blue","pink","green"];
 
-  const radius = 200;
-  const center = 250;
-  const activeBoxes = boxes.filter(b => !b.removed);
-  const angleStep = (2 * Math.PI) / activeBoxes.length;
-
-  activeBoxes.forEach((b, idx) => {
-    const angle = idx * angleStep;
-    const x = center + radius * Math.cos(angle) - 40;
-    const y = center + radius * Math.sin(angle) - 40;
-
+  boxes.forEach((b,i)=>{
     const div = document.createElement("div");
-    div.className = "box";
-    div.style.left = x + "px";
-    div.style.top = y + "px";
-    div.innerText = b.id;
-
-    if (lockedIndex === boxes.indexOf(b)) {
-      div.classList.add("locked");
-    }
-
-    div.onclick = () => openBox(boxes.indexOf(b));
-    wheel.appendChild(div);
+    div.className = `note ${colors[i%3]}`;
+    if (b.removed) div.classList.add("removed");
+    if (lockedIndex===i) div.classList.add("locked");
+    div.innerHTML = `<span>${b.id}</span>`;
+    div.onclick = ()=>openBox(i);
+    board.appendChild(div);
   });
 }
 
 function openBox(i) {
-  if (lockedIndex === i) return;
-
+  if (lockedIndex===i || boxes[i].removed) return;
   const b = boxes[i];
+
   const correct = confirm(
     `❓ ${b.question}\n\nOK = Trả lời đúng\nCancel = Trả lời sai`
   );
@@ -162,26 +167,30 @@ function openBox(i) {
   render();
 }
 
-function shuffleInstant() {
-  boxes.sort(()=>Math.random()-0.5);
-}
-
 function shuffleBoxes() {
-  const wheel = document.getElementById("wheel");
-  [...wheel.children].forEach(el => el.classList.add("shuffle"));
-
-  const movable = boxes.filter((b,i)=>!b.removed && i!==lockedIndex);
+  const notes = document.querySelectorAll(".note");
+  notes.forEach(n=>n.classList.add("shuffle"));
 
   let count = 0;
   const interval = setInterval(()=>{
-    movable.sort(()=>Math.random()-0.5);
+    const movableIndexes = boxes
+      .map((b,i)=>({b,i}))
+      .filter(o=>!o.b.removed && o.i!==lockedIndex)
+      .map(o=>o.i);
+
+    for (let i=movableIndexes.length-1;i>0;i--) {
+      const j = Math.floor(Math.random()*(i+1));
+      [boxes[movableIndexes[i]], boxes[movableIndexes[j]]] =
+      [boxes[movableIndexes[j]], boxes[movableIndexes[i]]];
+    }
+
     render();
     count++;
-    if (count >= 10) {
+    if (count>=10) {
       clearInterval(interval);
-      [...wheel.children].forEach(el => el.classList.remove("shuffle"));
+      document.querySelectorAll(".note").forEach(n=>n.classList.remove("shuffle"));
     }
-  }, 500); // 10 lần x 0.5s = 5s
+  },500); // 5s
 }
 </script>
 
