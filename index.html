@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Open The Box – Pro Stage</title>
+<title>Open The Box – 3D Flip Lid</title>
 
 <style>
 *{box-sizing:border-box}
@@ -16,7 +16,10 @@ body{
 }
 
 /* ===== HEADER ===== */
-header{text-align:center;padding:20px}
+header{
+  text-align:center;
+  padding:20px;
+}
 header h1{
   margin:0;
   font-size:42px;
@@ -27,12 +30,16 @@ header h1{
 
 /* ===== CONTROLS ===== */
 .controls{
-  position:absolute;top:20px;right:30px;z-index:10;
+  position:absolute;
+  top:20px;
+  right:30px;
+  z-index:10;
 }
 .controls button{
   padding:10px 24px;
   margin-left:10px;
-  border:none;border-radius:30px;
+  border:none;
+  border-radius:30px;
   cursor:pointer;
   background:linear-gradient(135deg,#ffd966,#ffb703);
   font-weight:700;
@@ -46,8 +53,9 @@ header h1{
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:30px;
-  position:relative;
 }
+
+/* ===== BOX ===== */
 .box{
   height:140px;
   border-radius:18px;
@@ -60,55 +68,94 @@ header h1{
   color:#064e3b;
   cursor:pointer;
   box-shadow:0 15px 30px rgba(0,0,0,.45);
-  transition:transform .6s ease,opacity .4s ease;
 }
 .box.removed{opacity:0;transform:scale(0)}
 .box.locked{filter:grayscale(1)}
 
-/* ===== CLONE ZOOM ===== */
-.zoom-clone{
+/* ===== ZOOM OVERLAY ===== */
+#zoomStage{
   position:fixed;
-  border-radius:18px;
-  background:linear-gradient(135deg,#fffbe6,#fde68a);
-  box-shadow:0 30px 60px rgba(0,0,0,.6);
+  inset:0;
+  pointer-events:none;
   z-index:50;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  padding:24px;
-  text-align:center;
-  color:#14532d;
-  animation:zoomToCenter .5s ease forwards;
 }
-@keyframes zoomToCenter{
+
+/* ===== 3D BOX ===== */
+.flip-box{
+  position:fixed;
+  width:420px;
+  min-height:280px;
+  border-radius:22px;
+  background:#fffbe6;
+  box-shadow:0 40px 80px rgba(0,0,0,.6);
+  transform-style:preserve-3d;
+  pointer-events:auto;
+  animation:flyToCenter .5s cubic-bezier(.4,0,.2,1) forwards;
+}
+
+/* xuất phát từ ô */
+@keyframes flyToCenter{
   to{
     left:50%;
     top:50%;
-    transform:translate(-50%,-50%) scale(1.8);
+    transform:translate(-50%,-50%) scale(1);
   }
 }
-.zoom-clone h2{font-size:26px;margin-bottom:12px}
-.zoom-clone p{
-  font-size:20px;
-  line-height:1.4;
-  margin-bottom:16px;
+
+/* ===== LID ===== */
+.lid{
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg,#fde68a,#facc15);
+  border-radius:22px;
+  transform-origin:top;
+  transform:rotateX(0deg);
+  transition:transform .8s cubic-bezier(.4,0,.2,1);
+  backface-visibility:hidden;
+  z-index:2;
 }
-.zoom-clone button{
-  margin:8px;
-  padding:10px 22px;
+.flip-box.open .lid{
+  transform:rotateX(-110deg);
+}
+
+/* ===== CONTENT ===== */
+.content{
+  position:relative;
+  z-index:1;
+  padding:32px;
+  text-align:center;
+  color:#14532d;
+}
+.content h2{
+  font-size:28px;
+  margin:0 0 16px;
+}
+.content p{
+  font-size:22px;
+  line-height:1.5;
+  word-break:break-word;
+  margin:0 0 20px;
+}
+.actions{
+  display:flex;
+  justify-content:center;
+  gap:18px;
+}
+.actions button{
+  padding:12px 26px;
+  font-size:18px;
+  font-weight:700;
   border:none;
-  border-radius:20px;
+  border-radius:22px;
   cursor:pointer;
   background:#ffd966;
-  font-weight:700;
 }
 
 /* ===== REWARD ===== */
-#reward{
+#rewardPopup{
   position:fixed;
   inset:0;
-  background:rgba(0,0,0,.6);
+  background:rgba(0,0,0,.65);
   display:none;
   align-items:center;
   justify-content:center;
@@ -119,8 +166,8 @@ header h1{
   padding:36px;
   border-radius:26px;
   text-align:center;
-  color:#78350f;
   animation:pop .4s ease;
+  color:#78350f;
 }
 @keyframes pop{
   from{transform:scale(.7);opacity:0}
@@ -162,7 +209,9 @@ footer{
 <div id="board"></div>
 <footer>Chọn một ô bất kỳ</footer>
 
-<div id="reward">
+<div id="zoomStage"></div>
+
+<div id="rewardPopup">
   <div class="reward-box" id="rewardBox"></div>
 </div>
 
@@ -172,12 +221,14 @@ footer{
 
 <script>
 const SHEET_CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vReo557WJ8YlXpCjOrv1RwmBOWksCqGwUZF1i9mS7y1DLHCjjaJ6Fsp9viEoSUvW7bOsj_0FDCM9CHA/pub?gid=1640986760&single=true&output=csv";
+
 const board=document.getElementById("board");
-const reward=document.getElementById("reward");
+const zoomStage=document.getElementById("zoomStage");
+const rewardPopup=document.getElementById("rewardPopup");
 const rewardBox=document.getElementById("rewardBox");
 const winSound=document.getElementById("winSound");
 
-let questions=[],lockedIndex=null,activeClone=null,activeIndex=null;
+let questions=[],lockedIndex=null,activeIndex=null;
 
 fetch(SHEET_CSV_URL)
 .then(r=>r.text())
@@ -190,12 +241,6 @@ fetch(SHEET_CSV_URL)
   render();
 });
 
-function resetGame(){
-  questions.forEach(q=>q.removed=false);
-  lockedIndex=null;
-  render();
-}
-
 function render(){
   board.innerHTML="";
   questions.forEach((q,i)=>{
@@ -204,46 +249,63 @@ function render(){
     if(q.removed)d.classList.add("removed");
     if(lockedIndex===i)d.classList.add("locked");
     d.innerText=q.id;
-    d.onclick=()=>zoomBox(d,i);
+    d.onclick=()=>openBox(d,i);
     board.appendChild(d);
   });
 }
 
-function zoomBox(box,i){
-  if(questions[i].removed||lockedIndex===i||activeClone)return;
+function resetGame(){
+  questions.forEach(q=>q.removed=false);
+  lockedIndex=null;
+  render();
+}
+
+function openBox(box,i){
+  if(questions[i].removed||lockedIndex===i)return;
   activeIndex=i;
+
   const r=box.getBoundingClientRect();
-  activeClone=box.cloneNode(true);
-  activeClone.className="zoom-clone";
-  activeClone.style.left=r.left+"px";
-  activeClone.style.top=r.top+"px";
-  activeClone.style.width=r.width+"px";
-  activeClone.style.height=r.height+"px";
-  activeClone.innerHTML=`
-    <h2>❓ CÂU HỎI</h2>
-    <p>${questions[i].question}</p>
-    <button onclick="answer(true)">✅ Đúng</button>
-    <button onclick="answer(false)">❌ Sai</button>
+  const fb=document.createElement("div");
+  fb.className="flip-box";
+  fb.style.left=r.left + r.width/2 + "px";
+  fb.style.top=r.top + r.height/2 + "px";
+  fb.style.transform="translate(-50%,-50%) scale(.2)";
+
+  fb.innerHTML=`
+    <div class="lid"></div>
+    <div class="content">
+      <h2>❓ CÂU HỎI</h2>
+      <p>${questions[i].question}</p>
+      <div class="actions">
+        <button onclick="answer(true)">✅ Đúng</button>
+        <button onclick="answer(false)">❌ Sai</button>
+      </div>
+    </div>
   `;
-  document.body.appendChild(activeClone);
+
+  zoomStage.appendChild(fb);
+
+  requestAnimationFrame(()=>fb.classList.add("open"));
 }
 
 function answer(correct){
-  activeClone.remove();
-  activeClone=null;
+  const fb=document.querySelector(".flip-box");
+  if(!fb)return;
+
   if(correct){
     winSound.play();
     questions[activeIndex].removed=true;
-    lockedIndex=null;
-    reward.style.display="flex";
+    fb.remove();
+    rewardPopup.style.display="flex";
     rewardBox.innerHTML=`
       <h2>🎁 PHẦN THƯỞNG</h2>
       <p><strong>${questions[activeIndex].reward}</strong></p>
-      <button onclick="reward.style.display='none'">OK</button>
+      <button onclick="rewardPopup.style.display='none'">OK</button>
     `;
     render();
   }else{
     lockedIndex=activeIndex;
+    fb.remove();
     shuffleBoxes();
   }
 }
@@ -255,6 +317,7 @@ function shuffleBoxes(){
 
   boxes.forEach(b=>{
     const r=b.getBoundingClientRect();
+    b.style.transition="transform .6s cubic-bezier(.4,0,.2,1)";
     b.style.transform=
       `translate(${cx-r.left-r.width/2}px,${cy-r.top-r.height/2}px) scale(.6)`;
   });
@@ -265,11 +328,13 @@ function shuffleBoxes(){
       .filter(o=>!o.q.removed&&o.i!==lockedIndex)
       .map(o=>o.q);
     movable.sort(()=>Math.random()-0.5);
+
     let idx=0;
     questions=questions.map((q,i)=>{
       if(q.removed||i===lockedIndex)return q;
       return movable[idx++];
     });
+
     render();
   },600);
 }
