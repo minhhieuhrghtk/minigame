@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Open The Box – Zoom From Box</title>
+<title>Open The Box – Pro Stage</title>
 
 <style>
 *{box-sizing:border-box}
@@ -13,25 +13,6 @@ body{
   font-family:"Segoe UI",system-ui,sans-serif;
   background:radial-gradient(circle at top,#0f5132,#052e1b 70%);
   color:#fff;
-}
-
-/* ===== BLING BLING ===== */
-body::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  background:
-    radial-gradient(2px 2px at 20% 30%,#ffd966,transparent),
-    radial-gradient(1.5px 1.5px at 70% 40%,#ffd966,transparent),
-    radial-gradient(2px 2px at 40% 70%,#fff2b2,transparent),
-    radial-gradient(1.5px 1.5px at 80% 80%,#ffd966,transparent);
-  opacity:.6;
-  animation:twinkle 6s linear infinite;
-  pointer-events:none;
-}
-@keyframes twinkle{
-  0%,100%{opacity:.3}
-  50%{opacity:.8}
 }
 
 /* ===== HEADER ===== */
@@ -65,11 +46,8 @@ header h1{
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:30px;
-  transition:filter .4s ease;
+  position:relative;
 }
-#board.dimmed{filter:blur(4px) brightness(.6)}
-
-/* ===== BOX ===== */
 .box{
   height:140px;
   border-radius:18px;
@@ -83,76 +61,72 @@ header h1{
   cursor:pointer;
   box-shadow:0 15px 30px rgba(0,0,0,.45);
   transition:transform .6s ease,opacity .4s ease;
-  position:relative;
-  z-index:1;
 }
 .box.removed{opacity:0;transform:scale(0)}
 .box.locked{filter:grayscale(1)}
 
-/* ===== ZOOM STATE ===== */
-.box.zoomed{
+/* ===== CLONE ZOOM ===== */
+.zoom-clone{
   position:fixed;
-  top:50%;left:50%;
-  transform:translate(-50%,-50%) scale(2.2);
-  width:260px;
-  height:200px;
+  border-radius:18px;
+  background:linear-gradient(135deg,#fffbe6,#fde68a);
+  box-shadow:0 30px 60px rgba(0,0,0,.6);
   z-index:50;
-  cursor:default;
-}
-
-/* ===== QUESTION CONTENT ===== */
-.question{
-  padding:20px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  padding:24px;
   text-align:center;
-}
-.question h2{
-  font-size:26px;
-  margin-bottom:14px;
-  color:#064e3b;
-}
-.question p{
-  font-size:20px;
-  font-weight:600;
   color:#14532d;
+  animation:zoomToCenter .5s ease forwards;
 }
-.question button{
-  margin:10px;
-  padding:10px 24px;
+@keyframes zoomToCenter{
+  to{
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%) scale(1.8);
+  }
+}
+.zoom-clone h2{font-size:26px;margin-bottom:12px}
+.zoom-clone p{
+  font-size:20px;
+  line-height:1.4;
+  margin-bottom:16px;
+}
+.zoom-clone button{
+  margin:8px;
+  padding:10px 22px;
   border:none;
-  border-radius:22px;
+  border-radius:20px;
   cursor:pointer;
   background:#ffd966;
   font-weight:700;
-  color:#143;
 }
 
-/* ===== REWARD POPUP ===== */
-#rewardPopup{
+/* ===== REWARD ===== */
+#reward{
   position:fixed;
   inset:0;
-  background:rgba(0,0,0,.75);
+  background:rgba(0,0,0,.6);
   display:none;
   align-items:center;
   justify-content:center;
   z-index:99;
 }
 .reward-box{
-  width:480px;
   background:#fffbe6;
+  padding:36px;
   border-radius:26px;
-  padding:34px;
   text-align:center;
-  animation:zoomIn .4s ease;
-  color:#143;
+  color:#78350f;
+  animation:pop .4s ease;
 }
-@keyframes zoomIn{
+@keyframes pop{
   from{transform:scale(.7);opacity:0}
   to{transform:scale(1);opacity:1}
 }
-.reward-box h2{
-  font-size:34px;
-  color:#b45309;
-}
+.reward-box h2{font-size:32px}
 .reward-box strong{font-size:36px}
 .reward-box button{
   margin-top:20px;
@@ -188,8 +162,7 @@ footer{
 <div id="board"></div>
 <footer>Chọn một ô bất kỳ</footer>
 
-<!-- REWARD -->
-<div id="rewardPopup">
+<div id="reward">
   <div class="reward-box" id="rewardBox"></div>
 </div>
 
@@ -200,21 +173,21 @@ footer{
 <script>
 const SHEET_CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vReo557WJ8YlXpCjOrv1RwmBOWksCqGwUZF1i9mS7y1DLHCjjaJ6Fsp9viEoSUvW7bOsj_0FDCM9CHA/pub?gid=1640986760&single=true&output=csv";
 const board=document.getElementById("board");
-const rewardPopup=document.getElementById("rewardPopup");
+const reward=document.getElementById("reward");
 const rewardBox=document.getElementById("rewardBox");
 const winSound=document.getElementById("winSound");
 
-let questions=[],lockedIndex=null,activeBox=null,activeIndex=null;
+let questions=[],lockedIndex=null,activeClone=null,activeIndex=null;
 
 fetch(SHEET_CSV_URL)
 .then(r=>r.text())
 .then(csv=>{
   const rows=csv.split("\n").slice(1).filter(r=>r.trim()!=="").slice(0,16);
-  questions=rows.map(r=>{
+  questions=rows.map((r,i)=>{
     const [reward,question]=r.split(",");
-    return{reward,question,removed:false};
+    return{id:i+1,reward,question,removed:false};
   });
-  resetGame();
+  render();
 });
 
 function resetGame(){
@@ -230,67 +203,75 @@ function render(){
     d.className="box";
     if(q.removed)d.classList.add("removed");
     if(lockedIndex===i)d.classList.add("locked");
-    d.innerText=i+1;
-    d.onclick=()=>openBox(d,i);
+    d.innerText=q.id;
+    d.onclick=()=>zoomBox(d,i);
     board.appendChild(d);
   });
 }
 
-function openBox(box,i){
-  if(questions[i].removed||lockedIndex===i||activeBox)return;
-  activeBox=box;
+function zoomBox(box,i){
+  if(questions[i].removed||lockedIndex===i||activeClone)return;
   activeIndex=i;
-  board.classList.add("dimmed");
-  box.classList.add("zoomed");
-  box.innerHTML=`
-    <div class="question">
-      <h2>❓ CÂU HỎI</h2>
-      <p>${questions[i].question}</p>
-      <button onclick="answer(true)">✅ Đúng</button>
-      <button onclick="answer(false)">❌ Sai</button>
-    </div>`;
+  const r=box.getBoundingClientRect();
+  activeClone=box.cloneNode(true);
+  activeClone.className="zoom-clone";
+  activeClone.style.left=r.left+"px";
+  activeClone.style.top=r.top+"px";
+  activeClone.style.width=r.width+"px";
+  activeClone.style.height=r.height+"px";
+  activeClone.innerHTML=`
+    <h2>❓ CÂU HỎI</h2>
+    <p>${questions[i].question}</p>
+    <button onclick="answer(true)">✅ Đúng</button>
+    <button onclick="answer(false)">❌ Sai</button>
+  `;
+  document.body.appendChild(activeClone);
 }
 
 function answer(correct){
-  board.classList.remove("dimmed");
-  activeBox.classList.remove("zoomed");
-  activeBox.innerText=activeIndex+1;
-
+  activeClone.remove();
+  activeClone=null;
   if(correct){
     winSound.play();
     questions[activeIndex].removed=true;
     lockedIndex=null;
-    setTimeout(()=>{
-      rewardPopup.style.display="flex";
-      rewardBox.innerHTML=`
-        <h2>🎁 PHẦN THƯỞNG</h2>
-        <p><strong>${questions[activeIndex].reward}</strong></p>
-        <button onclick="rewardPopup.style.display='none'">OK</button>
-      `;
-      render();
-    },300);
+    reward.style.display="flex";
+    rewardBox.innerHTML=`
+      <h2>🎁 PHẦN THƯỞNG</h2>
+      <p><strong>${questions[activeIndex].reward}</strong></p>
+      <button onclick="reward.style.display='none'">OK</button>
+    `;
+    render();
   }else{
     lockedIndex=activeIndex;
     shuffleBoxes();
   }
-  activeBox=null;
 }
 
 function shuffleBoxes(){
-  const movable=questions
-    .map((q,i)=>({q,i}))
-    .filter(o=>!o.q.removed&&o.i!==lockedIndex)
-    .map(o=>o.q);
+  const boxes=[...document.querySelectorAll(".box")];
+  const cx=window.innerWidth/2;
+  const cy=window.innerHeight/2;
 
-  movable.sort(()=>Math.random()-0.5);
-
-  let idx=0;
-  questions=questions.map((q,i)=>{
-    if(q.removed||i===lockedIndex)return q;
-    return movable[idx++];
+  boxes.forEach(b=>{
+    const r=b.getBoundingClientRect();
+    b.style.transform=
+      `translate(${cx-r.left-r.width/2}px,${cy-r.top-r.height/2}px) scale(.6)`;
   });
 
-  render();
+  setTimeout(()=>{
+    const movable=questions
+      .map((q,i)=>({q,i}))
+      .filter(o=>!o.q.removed&&o.i!==lockedIndex)
+      .map(o=>o.q);
+    movable.sort(()=>Math.random()-0.5);
+    let idx=0;
+    questions=questions.map((q,i)=>{
+      if(q.removed||i===lockedIndex)return q;
+      return movable[idx++];
+    });
+    render();
+  },600);
 }
 </script>
 
