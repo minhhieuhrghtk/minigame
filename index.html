@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Open The Box Game</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #111;
+  color: #fff;
+  text-align: center;
+}
+#grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  max-width: 600px;
+  margin: 30px auto;
+}
+.box {
+  background: #ff9800;
+  padding: 30px;
+  font-size: 22px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: transform 0.5s, opacity 0.5s;
+}
+.box.locked {
+  background: #555;
+  cursor: not-allowed;
+}
+.box.removed {
+  opacity: 0;
+  pointer-events: none;
+}
+.shuffle {
+  animation: shake 0.5s infinite;
+}
+@keyframes shake {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(2deg); }
+  50% { transform: rotate(0deg); }
+  75% { transform: rotate(-2deg); }
+}
+button {
+  padding: 10px 20px;
+  font-size: 18px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<h1>🎁 OPEN THE BOX 🎁</h1>
+<button onclick="shuffleBoxes()">🔀 Xáo trộn</button>
+
+<div id="grid"></div>
+
+<script>
+const SHEET_CSV_URL = "PASTE_GOOGLE_SHEET_CSV_HERE";
+let boxes = [];
+let lockedIndex = null;
+
+fetch(SHEET_CSV_URL)
+  .then(res => res.text())
+  .then(csv => {
+    const rows = csv.split("\n").slice(1,17);
+    boxes = rows.map((r,i) => {
+      const [reward, question] = r.split(",");
+      return { id:i+1, reward, question, removed:false };
+    });
+    render();
+  });
+
+function render() {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  boxes.forEach((b,i) => {
+    if (b.removed) return;
+    const div = document.createElement("div");
+    div.className = "box";
+    if (lockedIndex === i) div.classList.add("locked");
+    div.innerText = b.id;
+    div.onclick = () => openBox(i);
+    grid.appendChild(div);
+  });
+}
+
+function openBox(i) {
+  if (lockedIndex === i) return;
+  const b = boxes[i];
+  const correct = confirm(
+    `❓ ${b.question}\n\nOK = Trả lời đúng\nCancel = Trả lời sai`
+  );
+  if (correct) {
+    alert(`🎉 Nhận thưởng: ${b.reward}`);
+    b.removed = true;
+    lockedIndex = null;
+  } else {
+    lockedIndex = i;
+    shuffleBoxes();
+  }
+  render();
+}
+
+function shuffleBoxes() {
+  const grid = document.getElementById("grid");
+  [...grid.children].forEach(el => el.classList.add("shuffle"));
+
+  setTimeout(() => {
+    const movable = boxes.filter((b,i)=>!b.removed && i!==lockedIndex);
+    movable.sort(()=>Math.random()-0.5);
+
+    let idx=0;
+    boxes = boxes.map((b,i)=>{
+      if (b.removed || i===lockedIndex) return b;
+      return movable[idx++];
+    });
+
+    [...grid.children].forEach(el => el.classList.remove("shuffle"));
+    render();
+  }, 5000);
+}
+</script>
+
+</body>
+</html>
