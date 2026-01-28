@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Open The Box – Awards Grid</title>
+<title>Open The Box – Zoom Question</title>
 
 <style>
 *{box-sizing:border-box}
@@ -31,16 +31,12 @@ body::before{
   pointer-events:none;
 }
 @keyframes twinkle{
-  0%{opacity:.3}
+  0%,100%{opacity:.3}
   50%{opacity:.8}
-  100%{opacity:.3}
 }
 
 /* ===== HEADER ===== */
-header{
-  text-align:center;
-  padding:20px;
-}
+header{text-align:center;padding:20px}
 header h1{
   margin:0;
   font-size:42px;
@@ -51,21 +47,15 @@ header h1{
 
 /* ===== CONTROLS ===== */
 .controls{
-  position:absolute;
-  top:20px;
-  right:30px;
+  position:absolute;top:20px;right:30px;
 }
 .controls button{
   padding:10px 24px;
   margin-left:10px;
-  border:none;
-  border-radius:30px;
+  border:none;border-radius:30px;
   cursor:pointer;
-  font-size:15px;
-  font-weight:600;
   background:linear-gradient(135deg,#ffd966,#ffb703);
-  color:#143;
-  box-shadow:0 8px 20px rgba(0,0,0,.4);
+  font-weight:600;
 }
 
 /* ===== GRID ===== */
@@ -92,61 +82,74 @@ header h1{
   box-shadow:0 15px 30px rgba(0,0,0,.45);
   transition:transform .8s ease,opacity .4s ease;
 }
-.box.removed{
-  opacity:0;
-  transform:scale(0);
-  pointer-events:none;
-}
-.box.locked{
-  filter:grayscale(1);
-}
+.box.removed{opacity:0;transform:scale(0)}
+.box.locked{filter:grayscale(1)}
 
-/* ===== POPUP ===== */
-#popup{
+/* ===== ZOOM CARD ===== */
+#zoomOverlay{
   position:fixed;
   inset:0;
   background:rgba(0,0,0,.7);
   display:none;
   align-items:center;
   justify-content:center;
-  z-index:99;
+  z-index:50;
 }
-.popup-box{
+.zoom-card{
   width:520px;
+  min-height:300px;
   background:#fffbe6;
   border-radius:24px;
   padding:30px;
-  text-align:center;
   color:#143;
-  animation:zoom .4s ease;
+  text-align:center;
+  animation:zoomIn .4s ease;
 }
-@keyframes zoom{
-  from{transform:scale(.7);opacity:0}
+@keyframes zoomIn{
+  from{transform:scale(.6);opacity:0}
   to{transform:scale(1);opacity:1}
 }
-.popup-box h2{
-  font-size:28px;
-  margin-bottom:20px;
-}
-.popup-box p{
-  font-size:22px;
-}
-.popup-box strong{
-  font-size:30px;
-  color:#b45309;
-}
-.popup-box button{
-  margin:15px;
+.zoom-card h2{font-size:30px}
+.zoom-card p{font-size:22px;margin:20px 0}
+.zoom-card button{
+  margin:10px;
   padding:12px 26px;
   border:none;
   border-radius:22px;
   cursor:pointer;
   background:#ffd966;
-  font-size:16px;
   font-weight:600;
 }
 
-/* ===== FOOTER ===== */
+/* ===== REWARD POPUP ===== */
+#rewardPopup{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.75);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:99;
+}
+.reward-box{
+  width:480px;
+  background:#fffbe6;
+  border-radius:26px;
+  padding:34px;
+  text-align:center;
+  animation:zoomIn .4s ease;
+}
+.reward-box h2{font-size:32px;color:#b45309}
+.reward-box strong{font-size:34px}
+.reward-box button{
+  margin-top:20px;
+  padding:12px 30px;
+  border:none;
+  border-radius:24px;
+  background:#ffd966;
+  font-weight:600;
+}
+
 footer{
   position:absolute;
   bottom:20px;
@@ -170,11 +173,16 @@ footer{
 </div>
 
 <div id="board"></div>
-
 <footer>Chọn một ô bất kỳ</footer>
 
-<div id="popup">
-  <div class="popup-box" id="popupBox"></div>
+<!-- ZOOM QUESTION -->
+<div id="zoomOverlay">
+  <div class="zoom-card" id="zoomCard"></div>
+</div>
+
+<!-- REWARD -->
+<div id="rewardPopup">
+  <div class="reward-box" id="rewardBox"></div>
 </div>
 
 <audio id="winSound">
@@ -184,8 +192,10 @@ footer{
 <script>
 const SHEET_CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vReo557WJ8YlXpCjOrv1RwmBOWksCqGwUZF1i9mS7y1DLHCjjaJ6Fsp9viEoSUvW7bOsj_0FDCM9CHA/pub?gid=1640986760&single=true&output=csv";
 const board=document.getElementById("board");
-const popup=document.getElementById("popup");
-const popupBox=document.getElementById("popupBox");
+const zoomOverlay=document.getElementById("zoomOverlay");
+const zoomCard=document.getElementById("zoomCard");
+const rewardPopup=document.getElementById("rewardPopup");
+const rewardBox=document.getElementById("rewardBox");
 const winSound=document.getElementById("winSound");
 
 let questions=[],lockedIndex=null,currentIndex=null;
@@ -215,16 +225,16 @@ function render(){
     if(q.removed)d.classList.add("removed");
     if(lockedIndex===i)d.classList.add("locked");
     d.innerText=i+1;
-    d.onclick=()=>openBox(i);
+    d.onclick=()=>openZoom(i);
     board.appendChild(d);
   });
 }
 
-function openBox(i){
+function openZoom(i){
   if(questions[i].removed||lockedIndex===i)return;
   currentIndex=i;
-  popup.style.display="flex";
-  popupBox.innerHTML=`
+  zoomOverlay.style.display="flex";
+  zoomCard.innerHTML=`
     <h2>❓ CÂU HỎI</h2>
     <p>${questions[i].question}</p>
     <button onclick="answer(true)">✅ Đúng</button>
@@ -233,17 +243,17 @@ function openBox(i){
 }
 
 function answer(correct){
-  popup.style.display="none";
+  zoomOverlay.style.display="none";
   if(correct){
     winSound.play();
     questions[currentIndex].removed=true;
     lockedIndex=null;
     setTimeout(()=>{
-      popup.style.display="flex";
-      popupBox.innerHTML=`
+      rewardPopup.style.display="flex";
+      rewardBox.innerHTML=`
         <h2>🎁 PHẦN THƯỞNG</h2>
         <p><strong>${questions[currentIndex].reward}</strong></p>
-        <button onclick="popup.style.display='none'">OK</button>
+        <button onclick="rewardPopup.style.display='none'">OK</button>
       `;
       render();
     },300);
@@ -253,7 +263,7 @@ function answer(correct){
   }
 }
 
-/* ===== SHUFFLE: GOM → TRỘN → BUNG ===== */
+/* ===== SHUFFLE ===== */
 function shuffleBoxes(animated=true){
   const boxes=[...document.querySelectorAll(".box")];
   const rect=board.getBoundingClientRect();
